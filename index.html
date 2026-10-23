@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Draw Carter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fff8ef;
+    --card: #ffffff;
+    --ink: #2b2118;
+    --muted: #8a7a6b;
+    --accent: #ff7a3d;
+    --accent-2: #3d8bff;
+    --line: #f0e3d3;
+    --good: #2bb673;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh;
+    background: var(--bg);
+    background-image: radial-gradient(#f3e2cc 1.2px, transparent 1.2px);
+    background-size: 18px 18px;
+    color: var(--ink);
+    font-family: "Fredoka", system-ui, sans-serif;
+    display: flex; justify-content: center;
+    padding: 20px 16px 40px;
+  }
+  .app { width: 100%; max-width: 760px; }
+  header { text-align: center; margin-bottom: 16px; }
+  h1 { font-size: clamp(32px, 7vw, 48px); margin: 0; letter-spacing: -1px; }
+  h1 span { color: var(--accent); }
+  .tag { color: var(--muted); margin: 4px 0 0; }
+  .card {
+    background: var(--card); border: 2px solid var(--line); border-radius: 22px;
+    padding: 20px; box-shadow: 0 6px 0 var(--line);
+  }
+  .screen { display: none; }
+  .screen.on { display: block; animation: pop .25s ease-out; }
+  @keyframes pop { from { transform: scale(.97); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  .start { display: grid; grid-template-columns: 180px 1fr; gap: 20px; align-items: center; }
+  .start img { width: 100%; border-radius: 16px; image-rendering: pixelated; border: 2px solid var(--line); }
+  .start h2 { margin: 0 0 6px; }
+  .start p { margin: 0 0 14px; color: var(--muted); line-height: 1.45; }
+  .levels { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .lvl {
+    border: 2px solid var(--line); background: #fff; border-radius: 14px; padding: 8px 12px;
+    font: inherit; cursor: pointer; text-align: left; color: var(--ink);
+  }
+  .lvl small { display: block; color: var(--muted); font-size: 12px; }
+  .lvl.sel { border-color: var(--accent); background: #fff1e8; }
+  .btn {
+    font: inherit; font-weight: 600; font-size: 18px; border: none; cursor: pointer;
+    background: var(--accent); color: #fff; padding: 12px 22px; border-radius: 14px;
+    box-shadow: 0 4px 0 #d95a20; transition: transform .05s;
+  }
+  .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #d95a20; }
+  .btn.ghost { background: #fff; color: var(--ink); border: 2px solid var(--line); box-shadow: 0 4px 0 var(--line); }
+  .btn.blue { background: var(--accent-2); box-shadow: 0 4px 0 #2a64c0; }
+
+  .center { text-align: center; }
+  .count { font-size: 64px; font-weight: 700; color: var(--accent); line-height: 1; margin: 0 0 8px; }
+  .bar { height: 10px; background: var(--line); border-radius: 99px; overflow: hidden; margin: 0 auto 16px; max-width: 320px; }
+  .bar i { display: block; height: 100%; background: var(--accent); width: 100%; }
+  canvas { display: block; margin: 0 auto; border-radius: 12px; touch-action: none; image-rendering: pixelated; }
+
+  .draw { display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: start; }
+  .tools { display: flex; flex-direction: column; gap: 12px; min-width: 150px; }
+  .tools h3 { margin: 0; font-size: 14px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+  .palette { display: grid; grid-template-columns: repeat(4, 34px); gap: 6px; }
+  .sw { width: 34px; height: 34px; border-radius: 10px; border: 3px solid #fff; outline: 2px solid var(--line); cursor: pointer; padding: 0; }
+  .sw.sel { outline: 3px solid var(--ink); transform: scale(1.08); }
+  .modes { display: flex; gap: 6px; flex-wrap: wrap; }
+  .mode { font: inherit; font-size: 14px; border: 2px solid var(--line); background: #fff; border-radius: 10px; padding: 6px 10px; cursor: pointer; color: var(--ink); }
+  .mode.sel { border-color: var(--accent-2); background: #eaf2ff; }
+  .timer { font-size: 14px; color: var(--muted); }
+
+  .results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }
+  .results figure { margin: 0; text-align: center; }
+  .results figcaption { color: var(--muted); font-size: 14px; margin-top: 6px; }
+  .results canvas, .results img { width: 100%; height: auto; border-radius: 12px; border: 2px solid var(--line); }
+  .score { font-size: 72px; font-weight: 700; line-height: 1; margin: 0; }
+  .verdict { font-size: 20px; margin: 6px 0 0; }
+  .best { color: var(--muted); font-size: 14px; margin-top: 4px; }
+  .row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  @media (max-width: 600px) {
+    .start { grid-template-columns: 1fr; }
+    .start img { max-width: 160px; margin: 0 auto; }
+    .draw { grid-template-columns: 1fr; }
+    .tools { flex-direction: row; flex-wrap: wrap; justify-content: center; min-width: 0; }
+    .palette { grid-template-columns: repeat(8, 30px); }
+    .sw { width: 30px; height: 30px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Draw <span>Carter</span></h1>
+    <p class="tag">Memorize the pixels. Paint him from memory. Get judged.</p>
+  </header>
+
+  <!-- start -->
+  <section class="screen on card" id="s-start">
+    <div class="start">
+      <img id="preview" alt="Pixelated Carter">
+      <div>
+        <h2>How it works</h2>
+        <p>A pixelated Carter flashes on screen for a few seconds. Then he vanishes and you paint him back, pixel by pixel. The closer your colors, the higher your score.</p>
+        <div class="levels" id="levels"></div>
+        <button class="btn" id="go">Show me Carter</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- memorize -->
+  <section class="screen card center" id="s-memo">
+    <p class="count" id="count">5</p>
+    <div class="bar"><i id="bar"></i></div>
+    <canvas id="memo"></canvas>
+  </section>
+
+  <!-- draw -->
+  <section class="screen card" id="s-draw">
+    <div class="draw">
+      <canvas id="board"></canvas>
+      <div class="tools">
+        <div>
+          <h3>Colors</h3>
+          <div class="palette" id="palette"></div>
+        </div>
+        <div>
+          <h3>Tool</h3>
+          <div class="modes">
+            <button class="mode sel" data-mode="pen">✏️ Pen</button>
+            <button class="mode" data-mode="fill">🪣 Fill</button>
+            <button class="mode" data-mode="erase">🧽 Erase</button>
+          </div>
+        </div>
+        <div class="timer" id="timer">0:00</div>
+        <button class="btn ghost" id="undo">↩ Undo</button>
+        <button class="btn" id="done">Done!</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- result -->
+  <section class="screen card center" id="s-result">
+    <p class="score" id="score">0%</p>
+    <p class="verdict" id="verdict"></p>
+    <p class="best" id="best"></p>
+    <div class="results">
+      <figure><canvas id="r-you"></canvas><figcaption>Your Carter</figcaption></figure>
+      <figure><canvas id="r-target"></canvas><figcaption>Pixel Carter</figcaption></figure>
+      <figure><img id="r-real" alt="Real Carter"><figcaption>Real Carter</figcaption></figure>
+    </div>
+    <div class="row">
+      <button class="btn" id="again">Try again</button>
+      <button class="btn ghost" id="menu">Change level</button>
+    </div>
+  </section>
+</div>
+
+<script src="carter.js"></script>
+<script>
+const LEVELS = [
+  { id: "easy",   name: "Easy",   cols: 10, colors: 5,  secs: 8 },
+  { id: "normal", name: "Normal", cols: 14, colors: 7,  secs: 5 },
+  { id: "hard",   name: "Hard",   cols: 20, colors: 9,  secs: 4 },
+  { id: "insane", name: "Insane", cols: 28, colors: 12, secs: 3 },
+];
+let level = LEVELS[1];
+
+const $ = id => document.getElementById(id);
+const img = new Image();
+let target = null;   // { cols, rows, palette: [[r,g,b]], cells: Int array of palette idx }
+let grid = [];       // player's cells, -1 = empty
+let history = [];
+let color = 0, mode = "pen", painting = false, startTime = 0, tick = null;
+
+// ---------- image processing ----------
+function buildTarget(lv) {
+  const cols = lv.cols;
+  const rows = Math.round(cols * img.height / img.width);
+  const c = document.createElement("canvas");
+  c.width = img.width; c.height = img.height;
+  const ctx = c.getContext("2d");
+  ctx.drawImage(img, 0, 0);
+  const data = ctx.getImageData(0, 0, c.width, c.height).data;
+
+  // average each block
+  const avg = [];
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+    const x0 = Math.floor(x * c.width / cols), x1 = Math.floor((x + 1) * c.width / cols);
+    const y0 = Math.floor(y * c.height / rows), y1 = Math.floor((y + 1) * c.height / rows);
+    let r = 0, g = 0, b = 0, n = 0;
+    for (let py = y0; py < y1; py++) for (let px = x0; px < x1; px++) {
+      const i = (py * c.width + px) * 4;
+      r += data[i]; g += data[i + 1]; b += data[i + 2]; n++;
+    }
+    avg.push([r / n, g / n, b / n]);
+  }
+
+  // k-means down to a small palette so the picture is actually reproducible
+  const k = lv.colors;
+  const sorted = [...avg].sort((a, b) => lum(a) - lum(b));
+  let centers = Array.from({ length: k }, (_, i) => [...sorted[Math.floor((i + 0.5) * sorted.length / k)]]);
+  let assign = new Array(avg.length).fill(0);
+  for (let iter = 0; iter < 20; iter++) {
+    assign = avg.map(p => nearest(p, centers));
+    const sums = centers.map(() => [0, 0, 0, 0]);
+    avg.forEach((p, i) => { const s = sums[assign[i]]; s[0] += p[0]; s[1] += p[1]; s[2] += p[2]; s[3]++; });
+    centers = centers.map((c0, i) => sums[i][3] ? [sums[i][0] / sums[i][3], sums[i][1] / sums[i][3], sums[i][2] / sums[i][3]] : c0);
+  }
+  // order palette dark -> light and remap
+  const order = centers.map((c0, i) => i).sort((a, b) => lum(centers[a]) - lum(centers[b]));
+  const remap = []; order.forEach((old, i) => remap[old] = i);
+  const palette = order.map(i => centers[i].map(Math.round));
+  return { cols, rows, palette, cells: assign.map(a => remap[a]) };
+}
+const lum = p => 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2];
+const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+const nearest = (p, cs) => { let bi = 0, bd = Infinity; cs.forEach((c, i) => { const d = dist(p, c); if (d < bd) { bd = d; bi = i; } }); return bi; };
+const rgb = p => `rgb(${p[0]},${p[1]},${p[2]})`;
+
+// ---------- rendering ----------
+function cellSize(maxW, maxH) {
+  return Math.max(4, Math.floor(Math.min(maxW / target.cols, maxH / target.rows)));
+}
+function paint(canvas, cells, size, gridLines) {
+  canvas.width = target.cols * size; canvas.height = target.rows * size;
+  const ctx = canvas.getContext("2d");
+  for (let i = 0; i < cells.length; i++) {
+    const x = i % target.cols, y = Math.floor(i / target.cols);
+    if (cells[i] < 0) {
+      ctx.fillStyle = (x + y) % 2 ? "#f6efe6" : "#fbf7f1";
+    } else ctx.fillStyle = rgb(target.palette[cells[i]]);
+    ctx.fillRect(x * size, y * size, size, size);
+  }
+  if (gridLines) {
+    ctx.strokeStyle = "rgba(0,0,0,.07)"; ctx.lineWidth = 1;
+    for (let x = 1; x < target.cols; x++) { ctx.beginPath(); ctx.moveTo(x * size + .5, 0); ctx.lineTo(x * size + .5, canvas.height); ctx.stroke(); }
+    for (let y = 1; y < target.rows; y++) { ctx.beginPath(); ctx.moveTo(0, y * size + .5); ctx.lineTo(canvas.width, y * size + .5); ctx.stroke(); }
+  }
+}
+function boardSize() {
+  const narrow = innerWidth < 600;
+  const maxW = narrow ? innerWidth - 72 : 480;
+  const maxH = narrow ? innerHeight * 0.55 : innerHeight - 200;
+  return cellSize(maxW, maxH);
+}
+
+// ---------- flow ----------
+function show(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.toggle("on", s.id === id));
+}
+
+function renderLevels() {
+  $("levels").innerHTML = "";
+  LEVELS.forEach(lv => {
+    const b = document.createElement("button");
+    b.className = "lvl" + (lv === level ? " sel" : "");
+    b.innerHTML = `${lv.name}<small>${lv.cols} wide · ${lv.colors} colors · ${lv.secs}s</small>`;
+    b.onclick = () => { level = lv; renderLevels(); updatePreview(); };
+    $("levels").appendChild(b);
+  });
+}
+function updatePreview() {
+  // blurred-out teaser so the start screen doesn't give the answer away
+  target = buildTarget({ cols: 6, colors: 6 });
+  const c = document.createElement("canvas");
+  paint(c, target.cells, 20, false);
+  $("preview").src = c.toDataURL();
+}
+
+function startRound() {
+  target = buildTarget(level);
+  grid = new Array(target.cells.length).fill(-1);
+  history = [];
+  show("s-memo");
+  const size = cellSize(Math.min(innerWidth - 72, 420), innerHeight - 280);
+  paint($("memo"), target.cells, size, false);
+  const total = level.secs * 1000, t0 = performance.now();
+  const step = now => {
+    const left = Math.max(0, total - (now - t0));
+    $("count").textContent = Math.ceil(left / 1000);
+    $("bar").style.width = (left / total * 100) + "%";
+    if (left > 0) requestAnimationFrame(step); else startDrawing();
+  };
+  requestAnimationFrame(step);
+}
+
+function startDrawing() {
+  show("s-draw");
+  $("palette").innerHTML = "";
+  target.palette.forEach((p, i) => {
+    const b = document.createElement("button");
+    b.className = "sw" + (i === color ? " sel" : "");
+    b.style.background = rgb(p);
+    b.title = `Color ${i + 1}`;
+    b.onclick = () => { color = i; if (mode === "erase") setMode("pen"); document.querySelectorAll(".sw").forEach((s, j) => s.classList.toggle("sel", j === i)); };
+    $("palette").appendChild(b);
+  });
+  if (color >= target.palette.length) color = 0;
+  redraw();
+  startTime = Date.now();
+  clearInterval(tick);
+  tick = setInterval(() => {
+    const s = Math.floor((Date.now() - startTime) / 1000);
+    $("timer").textContent = `⏱ ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  }, 250);
+}
+function redraw() { paint($("board"), grid, boardSize(), true); }
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll(".mode").forEach(b => b.classList.toggle("sel", b.dataset.mode === m));
+}
+document.querySelectorAll(".mode").forEach(b => b.onclick = () => setMode(b.dataset.mode));
+
+function cellAt(e) {
+  const r = $("board").getBoundingClientRect();
+  const x = Math.floor((e.clientX - r.left) / r.width * target.cols);
+  const y = Math.floor((e.clientY - r.top) / r.height * target.rows);
+  if (x < 0 || y < 0 || x >= target.cols || y >= target.rows) return -1;
+  return y * target.cols + x;
+}
+function apply(i) {
+  if (i < 0) return;
+  if (mode === "fill") {
+    const from = grid[i], to = color;
+    if (from === to) return;
+    const stack = [i];
+    while (stack.length) {
+      const j = stack.pop();
+      if (grid[j] !== from) continue;
+      grid[j] = to;
+      const x = j % target.cols, y = Math.floor(j / target.cols);
+      if (x > 0) stack.push(j - 1);
+      if (x < target.cols - 1) stack.push(j + 1);
+      if (y > 0) stack.push(j - target.cols);
+      if (y < target.rows - 1) stack.push(j + target.cols);
+    }
+  } else grid[i] = mode === "erase" ? -1 : color;
+  redraw();
+}
+const board = $("board");
+board.addEventListener("pointerdown", e => {
+  history.push(grid.slice()); if (history.length > 50) history.shift();
+  painting = mode !== "fill";
+  board.setPointerCapture(e.pointerId);
+  apply(cellAt(e));
+});
+board.addEventListener("pointermove", e => { if (painting) apply(cellAt(e)); });
+addEventListener("pointerup", () => painting = false);
+$("undo").onclick = () => { if (history.length) { grid = history.pop(); redraw(); } };
+addEventListener("resize", () => { if ($("s-draw").classList.contains("on")) redraw(); });
+
+function finish() {
+  clearInterval(tick);
+  // per-cell credit: exact color = 1, near color = partial, empty = 0
+  const maxD = 160;
+  let total = 0;
+  grid.forEach((g, i) => {
+    if (g < 0) return;
+    const d = dist(target.palette[g], target.palette[target.cells[i]]);
+    total += Math.max(0, 1 - d / maxD);
+  });
+  const pct = Math.round(total / grid.length * 100);
+  $("score").textContent = pct + "%";
+  $("score").style.color = pct >= 80 ? "var(--good)" : pct >= 55 ? "var(--accent-2)" : "var(--accent)";
+  $("verdict").textContent =
+    pct >= 90 ? "That IS Carter. Are you Carter?" :
+    pct >= 75 ? "Carter would frame this." :
+    pct >= 60 ? "Definitely Carter's cousin." :
+    pct >= 40 ? "Carter from a moving car." :
+    pct >= 20 ? "Carter in a parallel universe." :
+                "Who is this guy?";
+  const key = "drawcarter-best-" + level.id;
+  let best = 0;
+  try { best = +localStorage.getItem(key) || 0; if (pct > best) localStorage.setItem(key, pct); } catch (e) {}
+  $("best").textContent = `${level.name} · ${pct > best ? "New best!" : "Best: " + best + "%"} · ${$("timer").textContent.replace("⏱ ", "")}`;
+  const s = Math.max(4, Math.floor(200 / target.cols));
+  paint($("r-you"), grid, s, false);
+  paint($("r-target"), target.cells, s, false);
+  $("r-real").src = img.src;
+  show("s-result");
+}
+
+$("go").onclick = startRound;
+$("done").onclick = finish;
+$("again").onclick = startRound;
+$("menu").onclick = () => { renderLevels(); updatePreview(); show("s-start"); };
+
+img.onload = () => { renderLevels(); updatePreview(); };
+img.src = window.CARTER_SRC;
+</script>
+</body>
+</html>
